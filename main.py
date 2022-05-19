@@ -120,17 +120,90 @@ def ex6():
                     py = (1 / Ztemp) * G(y1, temp) * G(y2, temp) * G(y3, temp) * F(y1, y2, temp) * F(y2, y3, temp)
                     print(f"temp: {temp} i: {i}, j: {j} k: {k} py: {py}")
 
+
+def inner_multiply(base, y1, y2, temp):
+    y1tag = y2row(y1, base)
+    y2tag = y2row(y2, base)
+    return G(y1tag, temp) * F(y1tag, y2tag, temp)
+
+
+def calc_T1(base, temp):
+    upper_bound = np.power(2,base)
+    T1 = np.zeros(upper_bound)  # 2^2, 2^3...
+    for y2 in range(upper_bound):
+        entry_sum = 0
+        for y1 in range(upper_bound):
+            entry_sum += inner_multiply(base, y1, y2, temp)
+        T1[y2] = entry_sum
+
+    return T1
+
+
+def calc_Tk(base, Tprev, temp):
+    upper_bound = np.power(2, base)
+    Tk = np.zeros(upper_bound)  # 2^2, 2^3...
+    for yk1 in range(upper_bound):  # yk+1
+        entry_sum = 0
+        for yk in range(upper_bound):
+            yk_tag = y2row(yk, base)
+            yk1_tag = y2row(yk1, base)
+            entry_sum += Tprev[yk] * G(yk_tag, temp) * F(yk_tag, yk1_tag, temp)
+        Tk[yk1] = entry_sum
+    return Tk
+
+
+def calc_Tn(base, Tprev, temp):
+    upper_bound = np.power(2,base)
+    sum = 0
+    for yn in range(upper_bound):
+        yntag = y2row(yn, base)
+        sum += Tprev[yn] * G(yntag, temp)
+    return sum
+
+
+def calc_T(temp):
+    base = 8
+    T = {}
+    for i in range(0, base):
+        if i == 0:
+            T["T{0}".format(i+1)] = calc_T1(base, temp)
+        elif i == base-1:
+            Tprev = T['T{0}'.format(i)]
+            T["T{0}".format(i+1)] = calc_Tn(base, Tprev, temp)
+        else:
+            Tprev = T['T{0}'.format(i)]
+            T["T{0}".format(i+1)] = calc_Tk(base, Tprev, temp)
+
+    print(T)
+    # T1 = calc_T1(base)
+    # T2 = calc_Tk(base, T1)
+    # T3 = calc_Tk(base, T2)
+    # T4 = calc_Tk(base, T3)
+    # T5 = calc_Tk(base, T4)
+    # T6 = calc_Tk(base, T5)
+    # T7 = calc_Tk(base, T6)
+    # Tn = calc_Tn(base, T7)
+    # print(f"T1: {T1}\n")
+    # print(f"T1: {T2}\n")
+    # print(f"T3: {Tn}\n")
+
+
+def ex7():
+    calc_T()
+
+
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    arr1 = np.array([1, 2])
-    arr2 = np.array([1, 2])
-    # Temp = 1
-    # a = np.array([[1, 1], [1, -1], [-1, 1], [-1, -1]])
-    # ex3()
-    # ex4()
-    print(y2row(3, 2))
-    # ex5()
-    ex6()
+    # arr1 = np.array([1, 2])
+    # arr2 = np.array([1, 2])
+    # # Temp = 1
+    # # a = np.array([[1, 1], [1, -1], [-1, 1], [-1, -1]])
+    # # ex3()
+    # # ex4()
+    # print(y2row(3, 2))
+    # # ex5()
+    # ex6()
+    calc_T()
     # print(G(arr, Temp))
     # print(G(arr1, Temp))
     # print(np.exp([5]))
