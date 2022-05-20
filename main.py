@@ -279,11 +279,34 @@ def ex7():
 
 # Press the green button in the gutter to run the script.
 
+def ex8():
+    X = np.zeros((10000, 8, 8))
+    Temps = np.asarray([1, 1.5, 2])
+    for temp in Temps:
+        T = calc_T(temp)
+        p = calc_p(temp, T)
+        for i in range(10000):
+            X[i] = create_sample(p)
+
+        Etemp12 = 0
+        Etemp18 = 0
+        for n in range(1000):
+            Etemp12 += X[n][0][0] * X[n][1][1]
+            Etemp18 += X[n][0][0] * X[n][7][7]
+        Etemp12 /= 1000
+        Etemp18 /= 1000
+
+        print(f"----------Temp {temp}----------")
+        print(f"Etemp(X11, X22): {Etemp12}")
+        print(f"Etemp(X11, X88): {Etemp18}")
+
+
 if __name__ == '__main__':
     # ex3()
     # ex4()
     # ex5()
     # ex6()
     # ex7()
+    ex8()
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
