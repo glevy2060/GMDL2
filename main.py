@@ -164,32 +164,81 @@ def calc_Tn(base, Tprev, temp):
 def calc_T(temp):
     base = 8
     T = {}
-    for i in range(0, base):
-        if i == 0:
-            T["T{0}".format(i+1)] = calc_T1(base, temp)
-        elif i == base-1:
-            Tprev = T['T{0}'.format(i)]
-            T["T{0}".format(i+1)] = calc_Tn(base, Tprev, temp)
+    for k in range(1, base+1):
+        if k == 1:
+            T["T{0}".format(k)] = calc_T1(base, temp)
+        elif k == base:
+            Tprev = T['T{0}'.format(k-1)]
+            T["T{0}".format(k)] = calc_Tn(base, Tprev, temp)
         else:
-            Tprev = T['T{0}'.format(i)]
-            T["T{0}".format(i+1)] = calc_Tk(base, Tprev, temp)
+            Tprev = T['T{0}'.format(k-1)]
+            T["T{0}".format(k)] = calc_Tk(base, Tprev, temp)
+    return T
 
-    print(T)
-    # T1 = calc_T1(base)
-    # T2 = calc_Tk(base, T1)
-    # T3 = calc_Tk(base, T2)
-    # T4 = calc_Tk(base, T3)
-    # T5 = calc_Tk(base, T4)
-    # T6 = calc_Tk(base, T5)
-    # T7 = calc_Tk(base, T6)
-    # Tn = calc_Tn(base, T7)
-    # print(f"T1: {T1}\n")
-    # print(f"T1: {T2}\n")
-    # print(f"T3: {Tn}\n")
+
+def calc_p12(base, temp, T1):
+    upper_bound = np.power(2, base)
+    p12 = np.zeros((upper_bound, upper_bound))
+    for y1 in range(upper_bound):
+        for y2 in range(upper_bound):
+            y1tag = y2row(y1, base)
+            y2tag = y2row(y2, base)
+            p12[y1][y2] = G(y1tag, temp) * F(y1tag, y2tag, temp) / T1[y2]
+    return p12
+
+
+def calc_pkk1(base, Tprev, Tk, temp):
+    upper_bound = np.power(2, base)
+    pkk1 = np.zeros((upper_bound, upper_bound))
+    for yk in range(upper_bound):
+        for yk1 in range(upper_bound): # yk1 = Yk+1
+            yktag = y2row(yk, base)
+            yk1tag = y2row(yk1, base)
+            pkk1[yk][yk1] = Tprev[yk] * G(yktag, temp) * F(yktag, yk1tag, temp) / Tk[yk1]
+    return pkk1
+
+
+def calc_p8(temp, base, T):
+    upper_bound = np.power(2, base)
+    T7 = T["T7"]
+    T8 = T["T8"]
+    p8 = np.zeros(upper_bound)
+    for y8 in range(upper_bound):
+        y8tag = y2row(y8, base)
+        p8[y8] = T7[y8] * G(y8tag, temp) / T8
+    return p8
+
+
+def calc_p(temp, T):
+    base = 8
+    p = {}
+    for k in range(1, base+1):
+        if k == 1:
+            p["p{0}{1}".format(k, k + 1)] = calc_p12(base, temp, T["T1"])
+        elif k == base:  # Last p to calc, p8
+            p["p{0}".format(k)] = calc_p8(temp, base, T)
+        else:
+            Tprev = T['T{0}'.format(k - 1)]
+            Tk = T['T{0}'.format(k)]
+            p["p{0}{1}".format(k, k + 1)] = calc_pkk1(base, Tprev, Tk, temp)
+    return p
 
 
 def ex7():
-    calc_T()
+    T = calc_T(1)
+    # p8 = calc_p8(1, 1, 8, T)
+    # print(p8)
+    # test = calc_p8(1, 8, T)
+    # print(test)
+    # print(len(test))
+    p = calc_p(1, T)
+    print(p)
+    print(len(p))
+    # calc_p(1, T)
+    # T1 = T["T1"]
+    # test = calc_p12(8, 1, T1)
+    # print(test)
+    # print(len(test))
 
 
 # Press the green button in the gutter to run the script.
@@ -203,7 +252,8 @@ if __name__ == '__main__':
     # print(y2row(3, 2))
     # # ex5()
     # ex6()
-    calc_T()
+    # calc_T()
+    ex7()
     # print(G(arr, Temp))
     # print(G(arr1, Temp))
     # print(np.exp([5]))
