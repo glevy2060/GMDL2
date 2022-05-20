@@ -1,6 +1,8 @@
 # This is a sample Python script.
 import numpy
 import numpy as np
+import matplotlib.pyplot as plt
+
 import itertools
 
 
@@ -72,6 +74,7 @@ def y2row(y, width=8):
     row=my_array
     return row
 
+
 def calc_Ztemp_ex5(Temp):
     sum = 0
     for i in range(0, 4):
@@ -80,6 +83,7 @@ def calc_Ztemp_ex5(Temp):
             y2 = y2row(j, 2)
             sum += G(y1, Temp) * G(y2, Temp) * F(y1, y2, Temp)
     return sum
+
 
 def ex5():
     temps = np.array([1, 1.5, 2])
@@ -214,49 +218,72 @@ def calc_p(temp, T):
     p = {}
     for k in range(1, base+1):
         if k == 1:
-            p["p{0}{1}".format(k, k + 1)] = calc_p12(base, temp, T["T1"])
+            p["p{0}|{1}".format(k, k + 1)] = calc_p12(base, temp, T["T1"])
         elif k == base:  # Last p to calc, p8
             p["p{0}".format(k)] = calc_p8(temp, base, T)
         else:
             Tprev = T['T{0}'.format(k - 1)]
             Tk = T['T{0}'.format(k)]
-            p["p{0}{1}".format(k, k + 1)] = calc_pkk1(base, Tprev, Tk, temp)
+            p["p{0}|{1}".format(k, k + 1)] = calc_pkk1(base, Tprev, Tk, temp)
     return p
 
 
+def create_sample(p):
+    sample = np.zeros((8, 8))
+    rands = np.zeros(8)
+
+    for j in range(8):
+        rands[j] = numpy.random.choice(numpy.arange(256), p=p["p8"])
+    rands = rands.astype(int)
+
+    # ------------build the sample------------
+    rand8 = rands[7]
+    # we pick the column that corresponds to that y8 we drew, and use it to sample y7|8. y7 => rows y8 => columns
+    # each column of pi|j is a distribution
+    rand7 = numpy.random.choice(numpy.arange(256), p=p["p7|8"][:, rand8])
+    rand6 = numpy.random.choice(numpy.arange(256), p=p["p6|7"][:, rand7])
+    rand5 = numpy.random.choice(numpy.arange(256), p=p["p5|6"][:, rand6])
+    rand4 = numpy.random.choice(numpy.arange(256), p=p["p4|5"][:, rand5])
+    rand3 = numpy.random.choice(numpy.arange(256), p=p["p3|4"][:, rand4])
+    rand2 = numpy.random.choice(numpy.arange(256), p=p["p2|3"][:, rand3])
+    rand1 = numpy.random.choice(numpy.arange(256), p=p["p1|2"][:, rand2])
+
+    # create the sample rows in {-1, 1} from the random numbers
+    sample[7] = y2row(int(rand8))
+    sample[6] = y2row(int(rand7))
+    sample[5] = y2row(int(rand6))
+    sample[4] = y2row(int(rand5))
+    sample[3] = y2row(int(rand4))
+    sample[2] = y2row(int(rand3))
+    sample[1] = y2row(int(rand2))
+    sample[0] = y2row(int(rand1))
+
+    return sample #sample of size 8x8
+
+
 def ex7():
-    T = calc_T(1)
-    # p8 = calc_p8(1, 1, 8, T)
-    # print(p8)
-    # test = calc_p8(1, 8, T)
-    # print(test)
-    # print(len(test))
-    p = calc_p(1, T)
-    print(p)
-    print(len(p))
-    # calc_p(1, T)
-    # T1 = T["T1"]
-    # test = calc_p12(8, 1, T1)
-    # print(test)
-    # print(len(test))
+    Temps = np.asarray([1, 1.5, 2])
+    fig, axs = plt.subplots(3, 10)
+    axs[0][0].set_title('Temp = 1')
+    axs[1][0].set_title('Temp = 1.5')
+    axs[2][0].set_title('Temp = 2')
+    for i in range(len(Temps)):
+        T = calc_T(Temps[i])
+        p = calc_p(Temps[i], T)
+        for j in range(10):
+            sample = create_sample(p)
+            axs[i][j].imshow(sample, interpolation='None')
+            axs[i][j].axis('off')
+    plt.show()
 
 
 # Press the green button in the gutter to run the script.
+
 if __name__ == '__main__':
-    # arr1 = np.array([1, 2])
-    # arr2 = np.array([1, 2])
-    # # Temp = 1
-    # # a = np.array([[1, 1], [1, -1], [-1, 1], [-1, -1]])
-    # # ex3()
-    # # ex4()
-    # print(y2row(3, 2))
-    # # ex5()
+    # ex3()
+    # ex4()
+    # ex5()
     # ex6()
-    # calc_T()
-    ex7()
-    # print(G(arr, Temp))
-    # print(G(arr1, Temp))
-    # print(np.exp([5]))
-    # print(F(arr1, arr2, Temp))
+    # ex7()
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
