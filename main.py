@@ -436,12 +436,12 @@ def ex10():
 
 
 if __name__ == '__main__':
-    # ex3()
-    # ex4()
-    # ex5()
-    # ex6()
-    # ex7()
-    # ex8()
-    # ex9()
+    ex3()
+    ex4()
+    ex5()
+    ex6()
+    ex7()
+    ex8()
+    ex9()
     ex10()
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
