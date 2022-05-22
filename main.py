@@ -262,14 +262,14 @@ def create_sample(p):
 
 
 def ex7():
-    Temps = np.asarray([1, 1.5, 2])
+    temps = np.asarray([1, 1.5, 2])
     fig, axs = plt.subplots(3, 10)
     axs[0][0].set_title('Temp = 1')
     axs[1][0].set_title('Temp = 1.5')
     axs[2][0].set_title('Temp = 2')
-    for i in range(len(Temps)):
-        T = calc_T(Temps[i])
-        p = calc_p(Temps[i], T)
+    for i in range(len(temps)):
+        T = calc_T(temps[i])
+        p = calc_p(temps[i], T)
         for j in range(10):
             sample = create_sample(p)
             axs[i][j].imshow(sample, interpolation='None')
@@ -277,12 +277,10 @@ def ex7():
     plt.show()
 
 
-# Press the green button in the gutter to run the script.
-
 def ex8():
     X = np.zeros((10000, 8, 8))
-    Temps = np.asarray([1, 1.5, 2])
-    for temp in Temps:
+    temps = np.asarray([1, 1.5, 2])
+    for temp in temps:
         T = calc_T(temp)
         p = calc_p(temp, T)
         for i in range(10000):
@@ -301,12 +299,149 @@ def ex8():
         print(f"Etemp(X11, X88): {Etemp18}")
 
 
+def gibbs_sampler(sample, temp):
+    n = np.array([
+        np.array([1, 0, -1, 0]),
+        np.array([0, 1, 0, -1])])
+    for i in range(1, 9):
+        for j in range(1, 9):
+            row = n[0] + i
+            column = n[1] + j
+            XsXt = np.array(sample[(row, column)])
+            exp = np.sum(XsXt) / temp
+            positive = np.exp(exp)
+            negative = np.exp(-exp)
+            p = [positive, negative] / (positive + negative)
+            sample[i, j] = np.random.choice([1, -1], p=p)
+    return sample
+
+
+def pad(vector, pad_width, _, kwargs):
+    pad_value = kwargs.get('padder', 0)
+    vector[:pad_width[0]] = pad_value
+    vector[-pad_width[1]:] = pad_value
+
+
+def method_1_independent_sampler(temp):
+    sweeps = 25
+    Etemp12 = 0
+    Etemp18 = 0
+    # 10,000 Gibbs samples initialization
+    samples = np.pad((np.random.randint(low=0, high=2, size=(10000, 8, 8)) * 2-1), 1, pad)
+    for i in range(len(samples)):
+        for _ in range(sweeps):
+            gibbs_sampler(samples[i], temp)
+        Etemp12 += samples[i][1, 1] * samples[i][2, 2]
+        Etemp18 += samples[i][1, 1] * samples[i][8, 8]
+
+    Etemp12 /= 10000
+    Etemp18 /= 10000
+
+    print(f"----------Temp {temp}----------")
+    print(f"Etemp(X11, X22): {Etemp12}")
+    print(f"Etemp(X11, X88): {Etemp18}")
+
+
+def method_2_ergodicity(temp):
+    burn_in_period = 100
+    sweeps = 25000
+    Etemp12 = 0
+    Etemp18 = 0
+    sample = np.pad((np.random.randint(low=0, high=2, size=(8, 8)) * 2-1), 1, pad)
+    for i in range(sweeps):
+        gibbs_sampler(sample, temp)
+        if i > burn_in_period:
+            Etemp12 += sample[1, 1] * sample[2, 2]
+            Etemp18 += sample[1, 1] * sample[8, 8]
+
+    Etemp12 /= 24900
+    Etemp18 /= 24900
+
+    print(f"----------Temp {temp}----------")
+    print(f"Etemp(X11, X22): {Etemp12}")
+    print(f"Etemp(X11, X88): {Etemp18}")
+
+
+def ex9():
+    Temps = [1, 1.5, 2]
+    # print("---------Independent_Samples---------")
+    # for temp in Temps:
+    #     method_1_independent_sampler(temp)
+
+    print("---------Ergodicity_Samples---------")
+    for temp in Temps:
+        method_2_ergodicity(temp)
+
+
+def create_ratio(i, j, sample, temp, sigma, y):
+    n = np.array([
+        np.array([1, 0, -1, 0]),
+        np.array([0, 1, 0, -1])])
+    row = n[0] + i
+    column = n[1] + j
+    XsXt = np.array(sample[(row, column)])
+    positive = np.exp((np.sum(XsXt) / temp) - (np.square(y[i, j] + 1) / (2 * (sigma ** 2))))
+    negative = np.exp((-np.sum(XsXt) / temp) - (np.square(y[i, j] - 1) / (2 * (sigma ** 2))))
+    return positive, negative
+
+
+def posterior_gibbs_sample(temp, sweeps, y, sigma):
+    sample = np.pad((np.random.randint(low=0, high=2, size=(8, 8)) * 2-1), 1, pad)
+    for k in range(sweeps):
+        for i in range(1, 9):
+            for j in range(1, 9):
+                positive, negative = create_ratio(i, j, sample, temp, sigma, y)
+                p = [positive, negative] / (positive + negative)
+                sample[i, j] = np.random.choice([1, -1], p=p)
+    return sample
+
+
+def max_posterior_gibbs_sample(temp, sweeps, y, sigma):
+    sample = np.pad((np.random.randint(low=0, high=2, size=(8, 8)) * 2-1), 1, pad)
+    for k in range(sweeps):
+        for i in range(1, 9):
+            for j in range(1, 9):
+                positive, negative = create_ratio(i, j, sample, temp, sigma, y)
+                sample[i, j] = np.argmax([positive, negative]) * 2 - 1
+    return sample
+
+
+def imshow(results, axs, i):
+    j = 0
+    for key in results:
+        if key != "eta":
+            axs[i][j].imshow(results[key][1:-1, 1:-1], interpolation='None')
+            axs[i][j].axis('off')
+            axs[i][j].set_title(key, fontsize = 6)
+            j += 1
+
+
+def ex10():
+    sample = np.pad((np.random.randint(low=0, high=2, size=(100, 100)) * 2-1), 1, pad)
+    sweeps = 50
+    temps = [1, 1.5, 2]
+    sigma = 2
+    fig, axs = plt.subplots(3, 5)
+    fig.suptitle("Temps: [1, 1.5, 2]".format(temps))
+    results = {}
+    for i in range(len(temps)):
+        results["x"] = gibbs_sampler(sample, temps[i])
+        results["eta"] = np.pad((2*np.random.standard_normal(size=(100, 100))), 1, pad)
+        results["y"] = results["x"] + results["eta"]
+        results["posterior_sample"] = posterior_gibbs_sample(temps[i], sweeps, results["y"], sigma)
+        results["max_posterior_sample"] = max_posterior_gibbs_sample(temps[i], sweeps, results["y"], sigma)
+        results["max_likelihood"] = np.sign(results["y"])
+        imshow(results, axs, i)
+    plt.show()
+
+
 if __name__ == '__main__':
     # ex3()
     # ex4()
     # ex5()
     # ex6()
     # ex7()
-    ex8()
-
+    # ex8()
+    # ex9()
+    ex10()
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
